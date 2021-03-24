@@ -54,7 +54,7 @@ See <i>/help</i> For Commands/Guidelines & More Details.</b>
 
     ABOUT_MSG = """⭕️<b>My Name : Filter Flix Bot</b>
 
-⭕️<b>Creater :</b> @FlixBots    
+⭕️<b>Creator :</b> @FlixBots    
 
 ⭕️<b>Language :</b> <code>Python3</code>
 
