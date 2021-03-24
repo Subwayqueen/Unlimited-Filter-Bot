@@ -42,7 +42,7 @@ async def cb_handler(client, query):
                     InlineKeyboardButton("About Me", callback_data="about_data")
                 ],
                 [
-                    InlineKeyboardButton("Channel", url="https://t.me/FlixBot"),
+                    InlineKeyboardButton("Channel", url="https://t.me/FlixBots"),
                     InlineKeyboardButton("Support Bot", url="https://t.me/FlixHelpBot")
                 ]
             ]
