@@ -14,7 +14,7 @@ mydb = myclient[Config.DATABASE_NAME]
 
 async def add_filter(grp_id, text, reply_text, btn, file, alert):
     mycol = mydb[str(grp_id)]
-    mycol.create_index([('text', 'text')])
+    # mycol.create_index([('text', 'text')])
 
     data = {
         'text':str(text),
@@ -33,15 +33,18 @@ async def add_filter(grp_id, text, reply_text, btn, file, alert):
 async def find_filter(group_id, name):
     mycol = mydb[str(group_id)]
     
-    # query = mycol.find( {"text":name})
-    query = mycol.find( { "$text": {"$search": name}})
+    query = mycol.find( {"text":name})
+    # query = mycol.find( { "$text": {"$search": name}})
     try:
         for file in query:
             reply_text = file['reply']
             btn = file['btn']
-            alert = file['alert']
-            file = file['file']
-        return reply_text, btn, alert, file
+            fileid = file['file']
+            try:
+                alert = file['alert']
+            except:
+                alert = None
+        return reply_text, btn, alert, fileid
     except:
         return None, None, None, None
 
@@ -78,15 +81,15 @@ async def delete_filter(message, text, group_id):
 
 async def del_all(message, group_id, title):
     if str(group_id) not in mydb.list_collection_names():
-        await message.reply_text(f"Nothing to remove in {title}!", quote=True)
+        await message.edit_text(f"Nothing to remove in {title}!")
         return
         
     mycol = mydb[str(group_id)]
     try:
         mycol.drop()
-        await message.reply_text(f"All filters from {title} has been removed", quote=True)
+        await message.edit_text(f"All filters from {title} has been removed")
     except:
-        await message.reply_text(f"Couldn't remove all filters from group!", quote=True)
+        await message.edit_text(f"Couldn't remove all filters from group!")
         return
 
 

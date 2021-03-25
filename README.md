@@ -116,6 +116,22 @@ python3 bot.py
 * HEROKU_API_KEY  -  To check dyno status. Go to https://dashboard.heroku.com/account , scroll down and press Reveal API
 
 
+### Optional - To set alternate Bot Commmands!
+( *Add required field as heroku var and give desired command as value. You can edit it in sample_config.py also!*)
+
+* ADD_FILTER_CMD  -  default will be 'add'
+
+* DELETE_FILTER_CMD  -  default will be 'del'
+
+* DELETE_ALL_CMD  -  default will be 'delall'
+
+* CONNECT_COMMAND  -  default will be 'connect'
+
+* DISCONNECT_COMMAND  -  default will be 'disconnect'
+
+EG;  
+![Vars Eg](https://telegra.ph/file/1f956f3491f2f20a9c1ec.jpg)
+
 ## Credits
 
 <p align="left">

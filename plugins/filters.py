@@ -1,4 +1,6 @@
 import os
+import re
+import io
 import pyrogram
 
 from pyrogram import filters, Client
@@ -24,7 +26,7 @@ from plugins.helpers import parser,split_quotes
 
 
 
-@Client.on_message(filters.command('add'))
+@Client.on_message(filters.command(Config.ADD_FILTER_CMD))
 async def addfilter(client, message):
       
     userid = message.from_user.id
@@ -69,7 +71,7 @@ async def addfilter(client, message):
         return
 
     if (len(extracted) >= 2) and not message.reply_to_message:
-        reply_text, btn, alert = parser(extracted[1], text) 
+        reply_text, btn, alert = parser(extracted[1], text)
         fileid = None
         if not reply_text:
             await message.reply_text("You cannot have buttons alone, give some text to go with it!", quote=True)
@@ -91,10 +93,12 @@ async def addfilter(client, message):
             else:
                 reply_text = message.reply_to_message.text.html
                 fileid = None
+            alert = None
         except:
             reply_text = ""
             btn = "[]" 
             fileid = None
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.photo:
         try:
@@ -103,6 +107,7 @@ async def addfilter(client, message):
         except:
             reply_text = ""
             btn = "[]"
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.video:
         try:
@@ -111,6 +116,7 @@ async def addfilter(client, message):
         except:
             reply_text = ""
             btn = "[]"
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.audio:
         try:
@@ -118,7 +124,8 @@ async def addfilter(client, message):
             reply_text, btn, alert = parser(message.reply_to_message.caption.html, text)
         except:
             reply_text = ""
-            btn = "[]"  
+            btn = "[]"
+            alert = None
    
     elif message.reply_to_message and message.reply_to_message.document:
         try:
@@ -127,6 +134,7 @@ async def addfilter(client, message):
         except:
             reply_text = ""
             btn = "[]"
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.animation:
         try:
@@ -135,15 +143,16 @@ async def addfilter(client, message):
         except:
             reply_text = ""
             btn = "[]"
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.sticker:
         try:
             fileid = message.reply_to_message.sticker.file_id
             reply_text, btn, alert =  parser(extracted[1], text)
-        
         except:
             reply_text = ""
-            btn = "[]"                   
+            btn = "[]"
+            alert = None
 
     elif message.reply_to_message and message.reply_to_message.text:
         try:
@@ -152,6 +161,7 @@ async def addfilter(client, message):
         except:
             reply_text = ""
             btn = "[]"
+            alert = None
 
     else:
         return
@@ -199,17 +209,20 @@ async def get_all(client, message):
     count = await count_filters(grp_id)
     if count:
         filterlist = f"Total number of filters in **{title}** : {count}\n\n"
+
         for text in texts:
             keywords = " ×  `{}`\n".format(text)
-            if len(keywords) + len(filterlist) > 4096:
-                await message.reply_text(
-                    text=filterlist,
-                    quote=True,
-                    parse_mode="md"
+            
+            filterlist += keywords
+
+        if len(filterlist) > 4096:
+            with io.BytesIO(str.encode(filterlist.replace("`", ""))) as keyword_file:
+                keyword_file.name = "keywords.txt"
+                await message.reply_document(
+                    document=keyword_file,
+                    quote=True
                 )
-                filterlist = keywords
-            else:
-                filterlist += keywords
+            return
     else:
         filterlist = f"There are no active filters in **{title}**"
 
@@ -219,7 +232,7 @@ async def get_all(client, message):
         parse_mode="md"
     )
         
-@Client.on_message(filters.command('del'))
+@Client.on_message(filters.command(Config.DELETE_FILTER_CMD))
 async def deletefilter(client, message):
     userid = message.from_user.id
     chat_type = message.chat.type
@@ -264,7 +277,7 @@ async def deletefilter(client, message):
     await delete_filter(message, query, grp_id)
         
 
-@Client.on_message(filters.command(["delall"]))
+@Client.on_message(filters.command(Config.DELETE_ALL_CMD))
 async def delallconfirm(client, message):
     userid = message.from_user.id
     chat_type = message.chat.type
@@ -305,40 +318,45 @@ async def delallconfirm(client, message):
 @Client.on_message(filters.group & filters.text)
 async def give_filter(client,message):
     group_id = message.chat.id
-    name = message.text.lower()
+    name = message.text
 
-    reply_text, btn, alert, fileid = await find_filter(group_id, name)
-    if reply_text:
-        reply_text = reply_text.replace("\\n", "\n").replace("\\t", "\t")
+    keywords = await get_filters(group_id)
+    for keyword in keywords:
+        pattern = r"( |^|[^\w])" + re.escape(keyword) + r"( |$|[^\w])"
+        if re.search(pattern, name, flags=re.IGNORECASE):
+            reply_text, btn, alert, fileid = await find_filter(group_id, keyword)
 
-    if btn is not None:
-        try:
-            if fileid == "None":
-                if btn == "[]":
-                    await message.reply_text(reply_text)
-                else:
-                    button = eval(btn)
-                    await message.reply_text(
-                        reply_text,
-                        parse_mode="html",
-                        reply_markup=InlineKeyboardMarkup(button)
-                    )
-            else:
-                if btn == "[]":
-                    await message.reply_cached_media(
-                        fileid,
-                        caption=reply_text or ""
-                    )
-                else:
-                    button = eval(btn) 
-                    await message.reply_cached_media(
-                        fileid,
-                        caption=reply_text or "",
-                        reply_markup=InlineKeyboardMarkup(button)
-                    )
-        except Exception as e:
-            print(e)
-            pass
+            if reply_text:
+                reply_text = reply_text.replace("\\n", "\n").replace("\\t", "\t")
+
+            if btn is not None:
+                try:
+                    if fileid == "None":
+                        if btn == "[]":
+                            await message.reply_text(reply_text)
+                        else:
+                            button = eval(btn)
+                            await message.reply_text(
+                                reply_text,
+                                parse_mode="html",
+                                reply_markup=InlineKeyboardMarkup(button)
+                            )
+                    else:
+                        if btn == "[]":
+                            await message.reply_cached_media(
+                                fileid,
+                                caption=reply_text or ""
+                            )
+                        else:
+                            button = eval(btn) 
+                            await message.reply_cached_media(
+                                fileid,
+                                caption=reply_text or "",
+                                reply_markup=InlineKeyboardMarkup(button)
+                            )
+                except Exception as e:
+                    print(e)
+                    pass
 
     if Config.SAVE_USER == "yes":
         try:
